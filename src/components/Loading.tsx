@@ -1,54 +1,68 @@
 import { useEffect, useState } from "react";
 import "./styles/Loading.css";
 import { useLoading } from "../context/LoadingProvider";
-
 import Marquee from "react-fast-marquee";
 
 const Loading = ({ percent }: { percent: number }) => {
   const { setIsLoading } = useLoading();
+
   const [loaded, setLoaded] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [clicked, setClicked] = useState(false);
+  const [initialFXCalled, setInitialFXCalled] = useState(false);
 
-  if (percent >= 100) {
-    setTimeout(() => {
-      setLoaded(true);
-      setTimeout(() => {
-        setIsLoaded(true);
-      }, 1000);
-    }, 600);
-  }
-
+  // ✅ FIX 1: Run only once when percent reaches 100
   useEffect(() => {
-    import("./utils/initialFX").then((module) => {
-      if (isLoaded) {
+    if (percent >= 100) {
+      const t1 = setTimeout(() => {
+        setLoaded(true);
+
+        const t2 = setTimeout(() => {
+          setIsLoaded(true);
+        }, 1000);
+
+        return () => clearTimeout(t2);
+      }, 600);
+
+      return () => clearTimeout(t1);
+    }
+  }, [percent]);
+
+  // ✅ FIX 2: Ensure initialFX runs ONLY once
+  useEffect(() => {
+    if (isLoaded && !clicked && !initialFXCalled) {
+      setInitialFXCalled(true);
+
+      import("./utils/initialFX").then((module) => {
         setClicked(true);
+
         setTimeout(() => {
           if (module.initialFX) {
             module.initialFX();
           }
           setIsLoading(false);
         }, 900);
-      }
-    });
-  }, [isLoaded]);
+      });
+    }
+  }, [isLoaded, clicked, initialFXCalled, setIsLoading]);
 
   function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
-    const { currentTarget: target } = e;
-    const rect = target.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    target.style.setProperty("--mouse-x", `${x}px`);
-    target.style.setProperty("--mouse-y", `${y}px`);
+
+    e.currentTarget.style.setProperty("--mouse-x", `${x}px`);
+    e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
   }
 
   return (
     <>
       <div className="loading-header">
         <a href="/#" className="loader-title" data-cursor="disable">
-          Logo
+          Shouray Soni
         </a>
-        <div className={`loaderGame ${clicked && "loader-out"}`}>
+
+        <div className={`loaderGame ${clicked ? "loader-out" : ""}`}>
           <div className="loaderGame-container">
             <div className="loaderGame-in">
               {[...Array(27)].map((_, index) => (
@@ -59,19 +73,24 @@ const Loading = ({ percent }: { percent: number }) => {
           </div>
         </div>
       </div>
+
       <div className="loading-screen">
         <div className="loading-marquee">
           <Marquee>
-            <span> A Creative Developer</span> <span>A Creative Designer</span>
-            <span> A Creative Developer</span> <span>A Creative Designer</span>
+            <span> A Creative Developer</span>
+            <span> A Creative Designer</span>
+            <span> A Creative Developer</span>
+            <span> A Creative Designer</span>
           </Marquee>
         </div>
+
         <div
-          className={`loading-wrap ${clicked && "loading-clicked"}`}
-          onMouseMove={(e) => handleMouseMove(e)}
+          className={`loading-wrap ${clicked ? "loading-clicked" : ""}`}
+          onMouseMove={handleMouseMove}
         >
           <div className="loading-hover"></div>
-          <div className={`loading-button ${loaded && "loading-complete"}`}>
+
+          <div className={`loading-button ${loaded ? "loading-complete" : ""}`}>
             <div className="loading-container">
               <div className="loading-content">
                 <div className="loading-content-in">
@@ -80,6 +99,7 @@ const Loading = ({ percent }: { percent: number }) => {
               </div>
               <div className="loading-box"></div>
             </div>
+
             <div className="loading-content2">
               <span>Welcome</span>
             </div>
@@ -92,19 +112,20 @@ const Loading = ({ percent }: { percent: number }) => {
 
 export default Loading;
 
+// ✅ CLEAN progress helper (no duplicates)
 export const setProgress = (setLoading: (value: number) => void) => {
-  let percent: number = 0;
+  let percent = 0;
 
   let interval = setInterval(() => {
     if (percent <= 50) {
-      let rand = Math.round(Math.random() * 5);
-      percent = percent + rand;
+      percent += Math.round(Math.random() * 5);
       setLoading(percent);
     } else {
       clearInterval(interval);
       interval = setInterval(() => {
-        percent = percent + Math.round(Math.random());
+        percent += Math.round(Math.random());
         setLoading(percent);
+
         if (percent > 91) {
           clearInterval(interval);
         }
@@ -120,6 +141,7 @@ export const setProgress = (setLoading: (value: number) => void) => {
   function loaded() {
     return new Promise<number>((resolve) => {
       clearInterval(interval);
+
       interval = setInterval(() => {
         if (percent < 100) {
           percent++;
@@ -131,5 +153,6 @@ export const setProgress = (setLoading: (value: number) => void) => {
       }, 2);
     });
   }
+
   return { loaded, percent, clear };
 };
