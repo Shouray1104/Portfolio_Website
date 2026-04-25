@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-# Portfolio_Website
+## Portfolio_Website
 Shouray Soni portfolio
 =======
 # My Portfolio Website - Overview 🚀
